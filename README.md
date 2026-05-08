@@ -108,3 +108,10 @@ This writes two files under `audio_generated/`:
 
 - `<input>_generated_1.wav` from the previous all-group ranking
 - `<input>_generated_2.wav` from the current low/high grouped mix
+
+Process and delete files under `audio_uploaded/`:
+
+```bash
+cd core
+conda run -n khuthon26 python scripts/process_audio_uploaded.py
+```

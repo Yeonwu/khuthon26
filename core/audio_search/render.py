@@ -16,6 +16,8 @@ from audio_search.search import find_similar_audio_groups
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TARGET_SR = 44_100
+MIN_BPM = 70.0
+MAX_BPM = 180.0
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,82 @@ class RankedMatch:
 
 def load_audio(path: Path, sample_rate: int = TARGET_SR) -> np.ndarray:
     return load_audio_array(path, sample_rate).astype(np.float32, copy=False)
+
+
+def _frame_energy(audio: np.ndarray, frame_length: int, hop_length: int) -> np.ndarray:
+    if audio.size < frame_length:
+        return np.asarray([], dtype=np.float32)
+
+    energies = []
+    for start in range(0, audio.size - frame_length + 1, hop_length):
+        frame = audio[start : start + frame_length]
+        energies.append(float(np.sqrt(np.mean(frame * frame))))
+    return np.asarray(energies, dtype=np.float32)
+
+
+def _peak_pick(envelope: np.ndarray, *, min_spacing: int, threshold: float) -> np.ndarray:
+    if envelope.size < 3:
+        return np.asarray([], dtype=np.int64)
+
+    peaks: list[int] = []
+    last_peak = -min_spacing
+    for index in range(1, envelope.size - 1):
+        if envelope[index] < threshold:
+            continue
+        if envelope[index] < envelope[index - 1] or envelope[index] < envelope[index + 1]:
+            continue
+        if peaks and index - last_peak < min_spacing:
+            if envelope[index] > envelope[peaks[-1]]:
+                peaks[-1] = index
+                last_peak = index
+            continue
+        peaks.append(index)
+        last_peak = index
+    return np.asarray(peaks, dtype=np.int64)
+
+
+def _tempo_from_peaks(peaks: np.ndarray, *, sample_rate: int, hop_length: int) -> float | None:
+    if peaks.size < 2:
+        return None
+
+    intervals = np.diff(peaks)
+    if intervals.size == 0:
+        return None
+
+    bpms = 60.0 * sample_rate / (intervals * hop_length)
+    valid = bpms[(bpms >= MIN_BPM) & (bpms <= MAX_BPM)]
+    if valid.size == 0:
+        return None
+
+    return float(np.median(valid))
+
+
+def _tempo_from_autocorr(envelope: np.ndarray, *, sample_rate: int, hop_length: int) -> float | None:
+    if envelope.size < 8:
+        return None
+
+    centered = envelope - float(envelope.mean())
+    if float(np.max(np.abs(centered))) <= 0:
+        return None
+
+    autocorr = np.correlate(centered, centered, mode="full")[centered.size - 1 :]
+    min_lag = int(round((60.0 / MAX_BPM) * sample_rate / hop_length))
+    max_lag = int(round((60.0 / MIN_BPM) * sample_rate / hop_length))
+    max_lag = min(max_lag, autocorr.size - 1)
+    if max_lag <= min_lag:
+        return None
+
+    window = autocorr[min_lag : max_lag + 1]
+    if window.size == 0:
+        return None
+
+    lag = int(np.argmax(window) + min_lag)
+    if lag <= 0:
+        return None
+    bpm = 60.0 * sample_rate / (lag * hop_length)
+    if bpm < MIN_BPM or bpm > MAX_BPM:
+        return None
+    return float(bpm)
 
 
 def estimate_bpm(audio: np.ndarray, sample_rate: int = TARGET_SR) -> float:
@@ -46,10 +124,8 @@ def estimate_bpm(audio: np.ndarray, sample_rate: int = TARGET_SR) -> float:
 
     novelty = novelty - novelty.mean()
     autocorr = np.correlate(novelty, novelty, mode="full")[novelty.size - 1 :]
-    min_bpm = 70.0
-    max_bpm = 180.0
-    min_lag = int(round((60.0 / max_bpm) * sample_rate / hop_length))
-    max_lag = int(round((60.0 / min_bpm) * sample_rate / hop_length))
+    min_lag = int(round((60.0 / MAX_BPM) * sample_rate / hop_length))
+    max_lag = int(round((60.0 / MIN_BPM) * sample_rate / hop_length))
     max_lag = min(max_lag, autocorr.size - 1)
     if max_lag <= min_lag:
         return 120.0

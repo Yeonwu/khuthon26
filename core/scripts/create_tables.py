@@ -49,6 +49,34 @@ ON audio_samples(instrument);
 
 CREATE INDEX IF NOT EXISTS audio_samples_tags_gin_idx
 ON audio_samples USING gin(tags);
+
+CREATE TABLE IF NOT EXISTS audio_uploads (
+  id BIGSERIAL PRIMARY KEY,
+  original_filename TEXT NOT NULL,
+  stored_filename TEXT NOT NULL UNIQUE,
+  file_path TEXT NOT NULL,
+  file_size BIGINT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'uploaded',
+  error_message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS audio_generations (
+  id BIGSERIAL PRIMARY KEY,
+  upload_id BIGINT NOT NULL REFERENCES audio_uploads(id) ON DELETE CASCADE,
+  filename TEXT NOT NULL,
+  file_path TEXT NOT NULL UNIQUE,
+  file_size BIGINT NOT NULL,
+  generation_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS audio_uploads_created_at_idx
+ON audio_uploads(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS audio_generations_upload_id_idx
+ON audio_generations(upload_id);
 """
 
 
@@ -108,7 +136,12 @@ def main() -> None:
                 SELECT table_name
                 FROM information_schema.tables
                 WHERE table_schema = 'public'
-                  AND table_name IN ('audio_samples', 'audio_segments')
+                  AND table_name IN (
+                    'audio_samples',
+                    'audio_segments',
+                    'audio_uploads',
+                    'audio_generations'
+                  )
                 ORDER BY table_name
                 """
             )
@@ -119,7 +152,12 @@ def main() -> None:
                     SELECT indexname
                     FROM pg_indexes
                     WHERE schemaname = 'public'
-                      AND tablename IN ('audio_samples', 'audio_segments')
+                      AND tablename IN (
+                        'audio_samples',
+                        'audio_segments',
+                        'audio_uploads',
+                        'audio_generations'
+                      )
                     ORDER BY indexname
                     """
                 )
