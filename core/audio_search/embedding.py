@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import tempfile
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -44,6 +46,65 @@ class QueryGroup:
     onset_times: tuple[float, ...]
 
 
+def load_audio_array(path: str | Path, target_sample_rate: int) -> np.ndarray:
+    audio_path = Path(path).expanduser().resolve()
+    if audio_path.suffix.lower() in {".mp3", ".m4a", ".aac", ".ogg", ".mp4"}:
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            tmp_wav = Path(tmp_dir_name) / "decoded.wav"
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    str(audio_path),
+                    "-ac",
+                    "1",
+                    "-ar",
+                    str(target_sample_rate),
+                    str(tmp_wav),
+                ],
+                check=True,
+            )
+            audio, source_sample_rate = sf.read(tmp_wav, always_2d=True, dtype="float32")
+            audio = audio.mean(axis=1)
+    else:
+        try:
+            audio, source_sample_rate = sf.read(audio_path, always_2d=True, dtype="float32")
+            audio = audio.mean(axis=1)
+        except Exception:
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                tmp_wav = Path(tmp_dir_name) / "decoded.wav"
+                subprocess.run(
+                    [
+                        "ffmpeg",
+                        "-y",
+                        "-loglevel",
+                        "error",
+                        "-i",
+                        str(audio_path),
+                        "-ac",
+                        "1",
+                        "-ar",
+                        str(target_sample_rate),
+                        str(tmp_wav),
+                    ],
+                    check=True,
+                )
+                audio, source_sample_rate = sf.read(tmp_wav, always_2d=True, dtype="float32")
+                audio = audio.mean(axis=1)
+
+    if source_sample_rate != target_sample_rate:
+        waveform = torch.from_numpy(audio).unsqueeze(0)
+        audio = AF.resample(
+            waveform,
+            orig_freq=source_sample_rate,
+            new_freq=target_sample_rate,
+        ).squeeze(0).numpy()
+    return np.asarray(audio, dtype=np.float32)
+
+
 def preprocess_audio(
     path: str | Path,
     *,
@@ -52,16 +113,7 @@ def preprocess_audio(
     peak_normalize: bool = True,
 ) -> np.ndarray:
     """Load audio as mono, resample, trim leading/trailing silence, and normalize."""
-    audio, source_sample_rate = sf.read(path, always_2d=True, dtype="float32")
-    audio = audio.mean(axis=1)
-    if source_sample_rate != target_sample_rate:
-        waveform = torch.from_numpy(audio).unsqueeze(0)
-        audio = AF.resample(
-            waveform,
-            orig_freq=source_sample_rate,
-            new_freq=target_sample_rate,
-        ).squeeze(0).numpy()
-    audio = np.asarray(audio, dtype=np.float32)
+    audio = load_audio_array(path, target_sample_rate)
 
     if audio.size == 0:
         raise ValueError(f"Audio is empty: {path}")

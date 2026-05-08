@@ -14,7 +14,7 @@ from audio_search.ingest import (
     save_embedded_segments,
 )
 from audio_search.search import find_similar_audio_groups, find_similar_audio_paths, search_by_embedding
-from audio_search.render import render_grouped_mix_preview
+from audio_search.render import render_best_match_preview, render_dual_previews, render_grouped_mix_preview
 
 __all__ = [
     "AudioSegment",
@@ -26,6 +26,8 @@ __all__ = [
     "embed_and_store_sample_record",
     "find_similar_audio_groups",
     "find_similar_audio_paths",
+    "render_best_match_preview",
+    "render_dual_previews",
     "make_query_groups",
     "preprocess_audio",
     "render_grouped_mix_preview",

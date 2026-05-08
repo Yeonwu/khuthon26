@@ -10,7 +10,7 @@ import soundfile as sf
 import torch
 import torchaudio.functional as AF
 
-from audio_search.embedding import MertEmbeddingExtractor
+from audio_search.embedding import MertEmbeddingExtractor, load_audio_array
 from audio_search.search import find_similar_audio_groups
 
 
@@ -26,12 +26,7 @@ class RankedMatch:
 
 
 def load_audio(path: Path, sample_rate: int = TARGET_SR) -> np.ndarray:
-    audio, source_sr = sf.read(path, always_2d=True, dtype="float32")
-    mono = audio.mean(axis=1)
-    if source_sr != sample_rate:
-        waveform = torch.from_numpy(mono).unsqueeze(0)
-        mono = AF.resample(waveform, source_sr, sample_rate).squeeze(0).numpy()
-    return mono.astype(np.float32, copy=False)
+    return load_audio_array(path, sample_rate).astype(np.float32, copy=False)
 
 
 def estimate_bpm(audio: np.ndarray, sample_rate: int = TARGET_SR) -> float:
@@ -114,14 +109,15 @@ def normalize(audio: np.ndarray, peak: float = 0.95) -> np.ndarray:
     return (audio / max_abs * peak).astype(np.float32)
 
 
-def pick_top_k_per_group(
+def pick_top_k_per_groups(
     groups: list[dict[str, object]],
     *,
     per_group: int = 5,
+    group_names: tuple[str, ...] = ("low_hit", "high_hit"),
 ) -> list[RankedMatch]:
     selected: list[RankedMatch] = []
     seen: set[str] = set()
-    for group_name in ("low_hit", "mid_hit", "high_hit"):
+    for group_name in group_names:
         group = next((item for item in groups if item["group"] == group_name), None)
         if not group:
             continue
@@ -137,6 +133,101 @@ def pick_top_k_per_group(
     return selected
 
 
+def pick_best_overall_match(groups: list[dict[str, object]]) -> RankedMatch:
+    best: RankedMatch | None = None
+    for group in groups:
+        group_name = str(group["group"])
+        for file_path, score, _, _ in group["matches"]:
+            candidate = RankedMatch(group=group_name, file_path=str(file_path), score=float(score))
+            if best is None or candidate.score > best.score:
+                best = candidate
+    if best is None:
+        raise ValueError("No search matches were found")
+    return best
+
+
+def render_source_preview(
+    *,
+    source_path: str | Path,
+    output_path: Path,
+    sample_rate: int = TARGET_SR,
+) -> Path:
+    audio = load_audio(Path(source_path), sample_rate=sample_rate)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    sf.write(output_path, normalize(audio), sample_rate)
+    return output_path
+
+
+def render_matched_source_preview(
+    *,
+    source_path: str | Path,
+    output_path: Path,
+    target_bpm: float,
+    target_length: int,
+    sample_rate: int = TARGET_SR,
+) -> Path:
+    source_path = Path(source_path)
+    source_audio = load_audio(source_path, sample_rate=sample_rate)
+    source_bpm = estimate_bpm(source_audio, sample_rate=sample_rate)
+    tempo_factor = target_bpm / source_bpm if source_bpm > 0 else 1.0
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp_dir_name:
+        tmp_dir = Path(tmp_dir_name)
+        raw_path = tmp_dir / "source.wav"
+        stretched_path = tmp_dir / "stretched.wav"
+        sf.write(raw_path, normalize(source_audio), sample_rate)
+        stretch_with_ffmpeg(raw_path, stretched_path, tempo_factor)
+        stretched = load_audio(stretched_path, sample_rate=sample_rate)
+        preview = fit_length(normalize(stretched), target_length)
+        sf.write(output_path, preview, sample_rate)
+    return output_path
+
+
+def render_best_match_preview(
+    conn,
+    query_path: str | Path,
+    *,
+    extractor: MertEmbeddingExtractor | None = None,
+    local_files_only: bool = True,
+    device: str | None = None,
+    per_group: int = 5,
+    output_dir: Path | None = None,
+    output_name: str | None = None,
+) -> Path:
+    owns_extractor = extractor is None
+    if extractor is None:
+        extractor = MertEmbeddingExtractor(local_files_only=local_files_only, device=device)
+
+    try:
+        query_audio = load_audio(Path(query_path))
+        target_bpm = estimate_bpm(query_audio)
+        target_length = query_audio.size
+        groups = find_similar_audio_groups(
+            conn,
+            query_path,
+            max(1, per_group),
+            extractor=extractor,
+            local_files_only=local_files_only,
+        )
+        match = pick_best_overall_match(groups)
+        output_root = output_dir or (PROJECT_ROOT / "audio_generated")
+        output_root.mkdir(parents=True, exist_ok=True)
+        output_path = output_root / (output_name or f"{Path(query_path).stem}_generated_1.wav")
+        source_path = Path(match.file_path)
+        if not source_path.is_absolute():
+            source_path = PROJECT_ROOT / source_path
+        return render_matched_source_preview(
+            source_path=source_path,
+            output_path=output_path,
+            target_bpm=target_bpm,
+            target_length=target_length,
+        )
+    finally:
+        if owns_extractor:
+            del extractor
+
+
 def render_grouped_mix_preview(
     conn,
     query_path: str | Path,
@@ -145,6 +236,7 @@ def render_grouped_mix_preview(
     local_files_only: bool = True,
     device: str | None = None,
     per_group: int = 5,
+    group_names: tuple[str, ...] = ("low_hit", "high_hit"),
     output_dir: Path | None = None,
     output_name: str | None = None,
 ) -> Path:
@@ -164,8 +256,8 @@ def render_grouped_mix_preview(
             extractor=extractor,
             local_files_only=local_files_only,
         )
-        selected = pick_top_k_per_group(groups, per_group=per_group)
-        if len(selected) < 3:
+        selected = pick_top_k_per_groups(groups, per_group=per_group, group_names=group_names)
+        if not selected:
             raise ValueError("Not enough matches to render a grouped mix preview")
 
         output_root = output_dir or (PROJECT_ROOT / "audio_generated")
@@ -175,7 +267,7 @@ def render_grouped_mix_preview(
         group_stems: list[np.ndarray] = []
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             tmp_dir = Path(tmp_dir_name)
-            for group_name in ("low_hit", "high_hit"):
+            for group_name in group_names:
                 group_matches = [match for match in selected if match.group == group_name]
                 if not group_matches:
                     continue
@@ -213,3 +305,40 @@ def render_grouped_mix_preview(
     finally:
         if owns_extractor:
             del extractor
+
+
+def render_dual_previews(
+    conn,
+    query_path: str | Path,
+    *,
+    extractor: MertEmbeddingExtractor | None = None,
+    local_files_only: bool = True,
+    device: str | None = None,
+    per_group: int = 5,
+    output_dir: Path | None = None,
+) -> tuple[Path, Path]:
+    output_root = output_dir or (PROJECT_ROOT / "audio_generated")
+    output_root.mkdir(parents=True, exist_ok=True)
+    base_name = Path(query_path).stem
+    generated_1 = render_best_match_preview(
+        conn,
+        query_path,
+        extractor=extractor,
+        local_files_only=local_files_only,
+        device=device,
+        per_group=per_group,
+        output_dir=output_root,
+        output_name=f"{base_name}_generated_1.wav",
+    )
+    generated_2 = render_grouped_mix_preview(
+        conn,
+        query_path,
+        extractor=extractor,
+        local_files_only=local_files_only,
+        device=device,
+        per_group=per_group,
+        group_names=("low_hit", "high_hit"),
+        output_dir=output_root,
+        output_name=f"{base_name}_generated_2.wav",
+    )
+    return generated_1, generated_2

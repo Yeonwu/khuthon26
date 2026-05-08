@@ -103,3 +103,8 @@ Render a grouped mix preview for a specific query file:
 cd core
 conda run -n khuthon26 python scripts/render_grouped_mix.py --audio-path ../test_audio2.mp3
 ```
+
+This writes two files under `audio_generated/`:
+
+- `<input>_generated_1.wav` from the previous all-group ranking
+- `<input>_generated_2.wav` from the current low/high grouped mix
