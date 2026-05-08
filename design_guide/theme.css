@@ -1,38 +1,58 @@
 @theme {
   /* Colors */
-  --color-cloud-cover: #f1f2f3;
-  --color-graphite: #111111;
-  --color-light-steel: #dddddd;
-  --color-snow: #ffffff;
-  --color-dark-slate: #2d2d2d;
-  --color-mid-grey: #b4b4b4;
-  --color-ash: #777777;
-  --color-neon-green: #009942;
+  --color-absolute-zero: #0e100f;
+  --color-frosted-canvas: #fffce1;
+  --color-faded-steel: #7c7c6f;
+  --color-deep-graphite: #42433d;
+  --color-neon-pink: #fec5fb;
+  --color-fiery-orange: #ff8709;
+  --color-shocking-green: #0ae448;
+  --color-digital-violet: #9d95ff;
+  --color-aqua-glow: #00bae2;
+  --color-mint-burst: #abff84;
 
   /* Typography */
-  --font-apple-system: '-apple-system', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-monospace: 'monospace', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-mori: 'Mori', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Typography — Scale */
-  --text-xs: 12px;
-  --leading-xs: 1.25;
-  --text-base: 16px;
-  --leading-base: 1.25;
-  --text-lg: 18px;
-  --leading-lg: 1.25;
-  --text-2xl: 28px;
-  --leading-2xl: 1.25;
+  --text-caption: 14px;
+  --leading-caption: 1.4;
+  --tracking-caption: -0.14px;
+  --text-body-sm: 16px;
+  --leading-body-sm: 1.4;
+  --tracking-body-sm: -0.16px;
+  --text-body: 18px;
+  --leading-body: 1.4;
+  --tracking-body: -0.18px;
+  --text-subheading: 24px;
+  --leading-subheading: 1.38;
+  --tracking-subheading: -0.24px;
+  --text-heading-sm: 32px;
+  --leading-heading-sm: 1.2;
+  --tracking-heading-sm: -0.64px;
+  --text-heading: 44px;
+  --leading-heading: 1.15;
+  --tracking-heading: -0.88px;
+  --text-heading-lg: 66px;
+  --leading-heading-lg: 1.05;
+  --tracking-heading-lg: -1.32px;
+  --text-display: 224px;
+  --leading-display: 0.9;
+  --tracking-display: -4.48px;
 
   /* Spacing */
-  --spacing-5: 5px;
   --spacing-8: 8px;
-  --spacing-10: 10px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
   --spacing-20: 20px;
-  --spacing-30: 30px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-76: 76px;
+  --spacing-96: 96px;
+  --spacing-108: 108px;
 
   /* Border Radius */
-  --radius-sm: 1.5px;
-  --radius-xl: 13px;
-  --radius-2xl: 20px;
-  --radius-3xl: 25px;
+  --radius-sm: 1px;
+  --radius-lg: 8px;
+  --radius-full: 100px;
 }
