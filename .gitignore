@@ -1,2 +1,5 @@
 /audio
+/audio_generated
 .env
+*.mp3
+*.wav

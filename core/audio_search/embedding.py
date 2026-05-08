@@ -37,6 +37,13 @@ class EmbeddedSegment:
     embedding: np.ndarray
 
 
+@dataclass(frozen=True)
+class QueryGroup:
+    name: str
+    segment: AudioSegment
+    onset_times: tuple[float, ...]
+
+
 def preprocess_audio(
     path: str | Path,
     *,
@@ -172,6 +179,133 @@ def segment_audio(
     return segments
 
 
+def detect_onsets(
+    audio: np.ndarray,
+    *,
+    sample_rate: int = TARGET_SAMPLE_RATE,
+    frame_length: int = 1024,
+    hop_length: int = 256,
+    min_spacing_seconds: float = 0.08,
+    threshold_ratio: float = 0.35,
+) -> np.ndarray:
+    if audio.size < frame_length:
+        return np.asarray([0], dtype=np.int64)
+
+    energies = []
+    for start in range(0, audio.size - frame_length + 1, hop_length):
+        frame = audio[start : start + frame_length]
+        energies.append(float(np.sqrt(np.mean(frame * frame))))
+    energy = np.asarray(energies, dtype=np.float32)
+    novelty = np.maximum(0.0, np.diff(energy, prepend=energy[0]))
+    if novelty.size == 0 or float(novelty.max()) <= 0:
+        return np.asarray([0], dtype=np.int64)
+
+    threshold = max(float(novelty.mean() + novelty.std()), float(novelty.max() * threshold_ratio))
+    min_spacing = max(1, int(round(min_spacing_seconds * sample_rate / hop_length)))
+    candidates = np.flatnonzero(novelty >= threshold)
+
+    peaks: list[int] = []
+    last_peak = -min_spacing
+    for index in candidates:
+        left = max(0, index - 1)
+        right = min(novelty.size, index + 2)
+        if novelty[index] < novelty[left:right].max():
+            continue
+        if index - last_peak < min_spacing:
+            if peaks and novelty[index] > novelty[peaks[-1]]:
+                peaks[-1] = int(index)
+                last_peak = int(index)
+            continue
+        peaks.append(int(index))
+        last_peak = int(index)
+
+    if not peaks:
+        return np.asarray([0], dtype=np.int64)
+    return np.asarray([peak * hop_length for peak in peaks], dtype=np.int64)
+
+
+def classify_event(audio: np.ndarray, *, sample_rate: int = TARGET_SAMPLE_RATE) -> str:
+    if audio.size == 0:
+        return "mid_hit"
+
+    spectrum = np.abs(np.fft.rfft(audio * np.hanning(audio.size)))
+    freqs = np.fft.rfftfreq(audio.size, d=1 / sample_rate)
+    total = float(np.sum(spectrum) + 1e-8)
+    low_ratio = float(np.sum(spectrum[freqs < 250]) / total)
+    high_ratio = float(np.sum(spectrum[freqs >= 3500]) / total)
+
+    if low_ratio >= 0.32:
+        return "low_hit"
+    if high_ratio >= 0.38:
+        return "high_hit"
+    return "mid_hit"
+
+
+def make_query_groups(
+    audio: np.ndarray,
+    *,
+    sample_rate: int = TARGET_SAMPLE_RATE,
+    min_segment_seconds: float = MIN_SEGMENT_SECONDS,
+    pre_onset_seconds: float = 0.03,
+    post_onset_seconds: float = 0.55,
+) -> list[QueryGroup]:
+    onset_frames = detect_onsets(audio, sample_rate=sample_rate)
+    pre_frames = int(round(pre_onset_seconds * sample_rate))
+    post_frames = int(round(post_onset_seconds * sample_rate))
+    min_frames = int(round(min_segment_seconds * sample_rate))
+
+    grouped_events: dict[str, list[np.ndarray]] = {
+        "low_hit": [],
+        "mid_hit": [],
+        "high_hit": [],
+    }
+    grouped_times: dict[str, list[float]] = {
+        "low_hit": [],
+        "mid_hit": [],
+        "high_hit": [],
+    }
+
+    for onset_frame in onset_frames:
+        start = max(0, int(onset_frame) - pre_frames)
+        end = min(audio.size, int(onset_frame) + post_frames)
+        event = audio[start:end]
+        if event.size == 0:
+            continue
+        group = classify_event(event, sample_rate=sample_rate)
+        grouped_events[group].append(event.astype(np.float32, copy=False))
+        grouped_times[group].append(int(onset_frame) / sample_rate)
+
+    query_groups: list[QueryGroup] = []
+    for index, name in enumerate(("low_hit", "mid_hit", "high_hit")):
+        events = grouped_events[name]
+        if not events:
+            continue
+        group_audio = np.concatenate(events)
+        if group_audio.size < min_frames:
+            repeat_count = int(np.ceil(min_frames / group_audio.size))
+            group_audio = np.tile(group_audio, repeat_count)[:min_frames]
+        peak = float(np.max(np.abs(group_audio)))
+        if peak > 0:
+            group_audio = group_audio / peak
+        segment = AudioSegment(
+            audio=group_audio.astype(np.float32, copy=False),
+            start_seconds=0.0,
+            end_seconds=len(group_audio) / sample_rate,
+            segment_index=index,
+            segment_type=f"query_group_{name}",
+            sample_rate=sample_rate,
+        )
+        query_groups.append(
+            QueryGroup(
+                name=name,
+                segment=segment,
+                onset_times=tuple(grouped_times[name]),
+            )
+        )
+
+    return query_groups
+
+
 def select_device(preferred_device: str | None = None) -> torch.device:
     if preferred_device:
         return torch.device(preferred_device)
@@ -230,3 +364,8 @@ class MertEmbeddingExtractor:
         audio = preprocess_audio(path, target_sample_rate=self.sample_rate)
         segments = segment_audio(audio, sample_rate=self.sample_rate)
         return self.embed_segments(segments)
+
+    def embed_query_groups(self, path: str | Path) -> list[tuple[QueryGroup, EmbeddedSegment]]:
+        audio = preprocess_audio(path, target_sample_rate=self.sample_rate)
+        groups = make_query_groups(audio, sample_rate=self.sample_rate)
+        return [(group, self.embed_segment(group.segment)) for group in groups]
