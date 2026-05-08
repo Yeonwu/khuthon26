@@ -1,0 +1,20 @@
+name: khuthon26
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - ffmpeg
+  - libsndfile
+  - pip:
+      - torch
+      - torchaudio
+      - transformers
+      - datasets
+      - accelerate
+      - soundfile
+      - librosa
+      - nnAudio
+      - numpy
+      - "psycopg[binary]"
+      - pgvector

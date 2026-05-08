@@ -1,1 +1,58 @@
 # khuthon26
+
+Local setup for running the Hugging Face model
+[`m-a-p/MERT-v1-330M`](https://huggingface.co/m-a-p/MERT-v1-330M).
+
+## Setup
+
+Create and activate the conda environment:
+
+```bash
+conda env create -f environment.yml
+conda activate khuthon26
+```
+
+If the environment already exists and you want to sync it with this file:
+
+```bash
+conda env update -n khuthon26 -f environment.yml --prune
+```
+
+## Smoke Test
+
+Run a short synthetic-audio inference test:
+
+```bash
+python scripts/run_mert_smoke.py
+```
+
+The first run downloads the model into the Hugging Face cache. Expected output
+includes a processor sampling rate of `24000`, hidden states with 25 layers, and
+a feature dimension of `1024`.
+
+After the first successful download, you can force cache-only execution:
+
+```bash
+python scripts/run_mert_smoke.py --local-files-only
+```
+
+## Core Usage
+
+Project code lives under `core/`.
+
+```bash
+cd core
+conda activate khuthon26
+```
+
+Use MERT embeddings from Python without writing files:
+
+```python
+from audio_search import MertEmbeddingExtractor
+
+extractor = MertEmbeddingExtractor(local_files_only=True)
+segments = extractor.embed_file("../audio/P1-001-050.wav")
+
+for item in segments:
+    print(item.segment.start_seconds, item.segment.end_seconds, item.embedding.shape)
+```
