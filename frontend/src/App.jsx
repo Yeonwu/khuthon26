@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import rightImage from '../assets/image.png';
 
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
@@ -203,7 +204,6 @@ export default function App() {
           const isGenerating = upload.status === 'processing' || generations.length === 0;
           return (
             <li className={`search-card upload-card status-${upload.status} ${upload.isLocal ? 'is-entering' : ''}`} key={upload.id}>
-              {upload.error_message && <p className="error">{upload.error_message}</p>}
 
               {isGenerating ? (
                 <>
@@ -229,9 +229,10 @@ export default function App() {
                         <button
                           type="button"
                           className="download-button"
+                          title="Download"
                           onClick={() => handleDownload(audioUrl, item.filename)}
                         >
-                          download
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         </button>
                       </div>
                     );
@@ -277,25 +278,20 @@ export default function App() {
                 </strong>
                 {file && <span>{formatBytes(file.size)}</span>}
               </label>
-              <button type="submit" disabled={!canUpload}>
-                {uploading ? 'uploading' : 'generate'}
+              <button type="submit" disabled={!canUpload} title="Search By Audio" style={{ padding: '15px', border: 'none' }}>
+                {uploading ? (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                ) : (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                )}
               </button>
             </form>
 
-            {error && <p className="error">Error: {error}</p>}
             {renderQueue()}
           </div>
 
-          <div className="visual-deck" aria-hidden="true">
-            <div className="deck-plane deck-plane-a" />
-            <div className="deck-plane deck-plane-b" />
-            <div className="wave-stack">
-              {Array.from({ length: 18 }).map((_, index) => (
-                <span key={index} style={{ '--i': index }} />
-              ))}
-            </div>
-            <div className="scan-ring scan-ring-a" />
-            <div className="scan-ring scan-ring-b" />
+          <div className="visual-deck" aria-hidden="true" style={{ opacity: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src={rightImage} alt="Decorative audio visual" style={{ maxWidth: '100%', height: 'auto', borderRadius: 'var(--radius-cards)' }} />
           </div>
         </div>
       </section>
