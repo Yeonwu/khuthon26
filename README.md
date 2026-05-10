@@ -8,7 +8,7 @@ Khuthon 2026 우수상 수상작
 
 발표용으로 제작한 인터랙티브 소개 페이지를 함께 제공합니다.
 
-- [디각 소개 페이지 열기](assets/presentation.html)
+- [디각 소개 페이지 열기](https://zcrawling.github.io/khuthon26/assets/presentation.html)
 - 마지막 페이지에서 원본 커버 음원과 국악 샘플 적용 결과를 15초 클립으로 비교 청음할 수 있습니다.
 - 키보드 `←` / `→` 또는 `Space`로 슬라이드를 넘길 수 있습니다.
 
