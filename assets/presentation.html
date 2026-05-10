@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <title>DigGak Presentation</title>
+  <style>
+    :root {
+      --color-absolute-zero: #0e100f;
+      --color-frosted-canvas: #fffce1;
+      --color-faded-steel: #7c7c6f;
+      --color-deep-graphite: #42433d;
+      --color-neon-pink: #fec5fb;
+      --color-fiery-orange: #ff8709;
+      --color-shocking-green: #0ae448;
+      --color-digital-violet: #9d95ff;
+      --color-aqua-glow: #00bae2;
+      --color-mint-burst: #abff84;
+      --font-mori: 'Mori', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--color-absolute-zero);
+      color: var(--color-frosted-canvas);
+      font-family: var(--font-mori);
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease-in-out, visibility 0.5s;
+      padding: 34px;
+      box-sizing: border-box;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .display {
+      font-size: 100px;
+      font-weight: 600;
+      letter-spacing: -2px;
+      line-height: 0.9;
+      margin: 0;
+    }
+
+    .heading-lg {
+      font-size: 66px;
+      font-weight: 600;
+      letter-spacing: -1.32px;
+      line-height: 1.05;
+      margin: 0;
+    }
+
+    .slide h2.heading-lg {
+      position: absolute;
+      top: 80px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      margin: 0;
+    }
+
+    .heading {
+      font-size: 44px;
+      font-weight: 600;
+      letter-spacing: -0.88px;
+      line-height: 1.15;
+      margin: 0;
+    }
+
+    .heading-sm {
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.64px;
+      line-height: 1.2;
+      margin: 0;
+    }
+
+    .subheading {
+      font-size: 24px;
+      font-weight: 400;
+      letter-spacing: -0.24px;
+      line-height: 1.38;
+      margin: 0;
+    }
+
+    .body-text {
+      font-size: 18px;
+      font-weight: 400;
+      letter-spacing: -0.18px;
+      line-height: 1.4;
+      color: var(--color-frosted-canvas);
+    }
+
+    .faded {
+      color: var(--color-faded-steel);
+    }
+
+    .layout-split {
+      display: flex;
+      width: 100%;
+      max-width: 1200px;
+      gap: 34px;
+      align-items: stretch;
+    }
+
+    .layout-split>div {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .layout-split>.center {
+      align-items: center;
+    }
+
+    .card {
+      background-color: var(--color-absolute-zero);
+      border: 2px solid var(--color-neon-pink);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .card.orange {
+      border-color: var(--color-fiery-orange);
+    }
+
+    .card.green {
+      border-color: var(--color-shocking-green);
+    }
+
+    .ghost-btn {
+      border: 1px solid var(--color-frosted-canvas);
+      border-radius: 100px;
+      padding: 15px 24px;
+      color: var(--color-frosted-canvas);
+      background: transparent;
+      font-family: var(--font-mori);
+      font-size: 18px;
+      display: inline-block;
+      margin-top: 24px;
+    }
+
+    .script-box {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      padding: 16px;
+      background: rgba(14, 16, 15, 0.8);
+      border: 1px solid var(--color-deep-graphite);
+      border-radius: 8px;
+      color: var(--color-faded-steel);
+      font-size: 16px;
+      text-align: center;
+    }
+
+    .flowchart {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .flowchart div {
+      padding: 12px 24px;
+      border: 1px solid var(--color-faded-steel);
+      border-radius: 8px;
+    }
+
+    .flowchart .highlight {
+      border-color: var(--color-shocking-green);
+      color: var(--color-shocking-green);
+      font-weight: bold;
+    }
+
+    .arrow {
+      color: var(--color-faded-steel);
+      font-size: 24px;
+      border: none !important;
+      padding: 0 !important;
+    }
+
+    .search-mockup {
+      border: 1px solid var(--color-deep-graphite);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: left;
+      background: #111;
+      box-sizing: border-box;
+    }
+
+    .search-mockup input {
+      width: 100%;
+      padding: 12px;
+      background: #000;
+      border: 1px solid var(--color-faded-steel);
+      color: #fff;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+    }
+
+    .search-mockup .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 100px;
+      border: 1px solid var(--color-faded-steel);
+      margin-right: 8px;
+      font-size: 14px;
+    }
+
+    .quote {
+      font-size: 44px;
+      font-style: italic;
+      color: var(--color-frosted-canvas);
+      text-align: center;
+      max-width: 900px;
+    }
+
+    .quote span {
+      color: var(--color-neon-pink);
+    }
+
+    .demo-grid {
+      width: min(100%, 1120px);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 34px;
+    }
+
+    .demo-card {
+      min-width: 0;
+      border: 1px solid var(--color-deep-graphite);
+      border-radius: 8px;
+      padding: 18px;
+      background: rgba(255, 252, 225, 0.03);
+      box-sizing: border-box;
+    }
+
+    .demo-card h3 {
+      margin: 0 0 8px;
+      color: var(--color-shocking-green);
+    }
+
+    .demo-card p {
+      margin: 0 0 14px;
+      min-height: 48px;
+    }
+
+    .audio-pair {
+      display: grid;
+      gap: 12px;
+    }
+
+    .audio-item span {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--color-faded-steel);
+      font-size: 14px;
+    }
+
+    .audio-item audio {
+      width: 100%;
+      height: 34px;
+    }
+
+    .slide-number {
+      position: absolute;
+      top: 34px;
+      right: 34px;
+      font-size: 16px;
+      color: var(--color-faded-steel);
+    }
+
+    @media print {
+      body, html {
+        height: auto;
+        overflow: visible;
+      }
+      .slide {
+        position: relative;
+        opacity: 1 !important;
+        visibility: visible !important;
+        page-break-after: always;
+        height: 100vh;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="slide active">
+    <h1 class="display" style="color: var(--color-frosted-canvas);">DigGak</h1>
+    <p class="subheading" style="margin-top: 16px; color: var(--color-faded-steel);">오디오 레퍼런스 기반 국악 샘플 탐색 도구</p>
+    <p class="body-text" style="margin-top: 24px;">TEAM 쿠카프</p>
+    <div class="script-box">“레퍼런스 오디오 기반 국악 샘플 탐색 도구 DigGak입니다.”</div>
+  </div>
+
+  <div class="slide">
+    <h2 class="heading-lg" style="margin-bottom: 34px;">Sample Digging?</h2>
+    <div class="center" style="width: 100%; display: flex; justify-content: center; margin-top: 80px;">
+      <div class="flowchart">
+        <div>Idea</div>
+        <div class="arrow">↓</div>
+        <div class="highlight">Sample Digging?</div>
+        <div class="arrow">↓</div>
+        <div>Composition</div>
+        <div class="arrow">↓</div>
+        <div>Mixing</div>
+      </div>
+    </div>
+    <div class="script-box">“작곡 과정에는 샘플 디깅 과정이 있습니다.”</div>
+  </div>
+
+  <div class="slide">
+    <h2 class="heading-lg" style="margin-bottom: 34px;">기존 샘플 탐색 과정</h2>
+    <div class="search-mockup" style="max-width: 600px; width: 100%;">
+      <div style="color: var(--color-faded-steel); margin-bottom: 8px;">Splice, 국립 국악원</div>
+      <input type="text" value="korean traditional, gayageum, asian string" readonly>
+      <div style="margin-top: 16px;">
+        <span class="tag">#english-tag</span>
+        <span class="tag">#genre</span>
+        <span class="tag">#pack</span>
+      </div>
+    </div>
+    <p class="subheading" style="margin-top: 34px; color: var(--color-fiery-orange);">기존 샘플 플랫폼은 메타데이터 기반 검색 중심</p>
+    <div class="script-box">“Splice는 키워드 중심 검색을 제공합니다.”</div>
+  </div>
+
+
+  <div class="slide">
+    <h2 class="heading-lg" style="margin-bottom: 34px;">국내 플랫폼도 동일</h2>
+    <div class="search-mockup" style="max-width: 600px; width: 100%; margin-bottom: 24px;">
+      <input type="text" value="국립국악원 아카이브 검색" readonly>
+    </div>
+    <table style="width: 100%; max-width: 600px; border-collapse: collapse; text-align: center;">
+      <tr style="border-bottom: 1px solid var(--color-deep-graphite);">
+        <th style="padding: 12px;">검색 가능</th>
+        <th style="padding: 12px; color: var(--color-neon-pink);">검색 어려움</th>
+      </tr>
+      <tr>
+        <td style="padding: 12px;">악기명, 시대</td>
+        <td style="padding: 12px; color: var(--color-neon-pink);">분위기, 질감</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px;">지역, 분류</td>
+        <td style="padding: 12px; color: var(--color-neon-pink);">감정, groove</td>
+      </tr>
+    </table>
+    <p class="body-text faded" style="margin-top: 24px; font-size: 14px;">(김민성. "국악아카이브 통합검색서비스 필요성 및 운영방안." 2024)</p>
+    <div class="script-box">“국내도 음악적 특성 검색은 어렵습니다.”</div>
+  </div>
+
+  <div class="slide">
+    <h2 class="heading-lg" style="margin-bottom: 34px;">전문가 의견</h2>
+    <div class="quote">
+      "메타데이터로 설정한 음악적 요소 자체에 아예<br><span>관심이 없거나 그 의미를 알지 못하는 창작자</span>들의<br>수요가 있다는 점을 간과해서는 안된다"
+    </div>
+    <p class="subheading faded" style="margin-top: 34px;">제주학정책연구 세미나</p>
+    <div class="script-box">“메타데이터에 관심이 없는 창작자가 있을 수도 있습니다”</div>
+  </div>
+
+  <div class="slide">
+    <h2 class="heading-lg" style="margin-bottom: 34px; color: var(--color-aqua-glow);">DigGak Solution</h2>
+    <p class="heading-sm" style="margin-bottom: 34px;">오디오 입력 기반 탐색 파이프라인</p>
+    <div class="flowchart" style="flex-direction: row;">
+      <div class="card orange">입력:<br>힙합 drum loop</div>
+      <div class="arrow">→</div>
+      <div
+        style="border-color: var(--color-aqua-glow); color: var(--color-aqua-glow); padding: 12px 24px; border: 1px solid var(--color-aqua-glow); border-radius: 8px;">
+        Audio Embedding</div>
+      <div class="arrow">→</div>
+      <div
+        style="border-color: var(--color-aqua-glow); color: var(--color-aqua-glow); padding: 12px 24px; border: 1px solid var(--color-aqua-glow); border-radius: 8px;">
+        Vector DB Similarity Search</div>
+      <div class="arrow">→</div>
+      <div class="card green">결과:<br>장구 리듬<br>가야금 플럭</div>
+    </div>
+    <div class="script-box">“유사한 국악 샘플을 추천합니다.”</div>
+  </div>
+
+  <div class="slide">
+    <h2 class="heading-lg" style="margin-bottom: 34px;">국악 샘플의 저작권</h2>
+    <div class="center" style="width: 100%; display: flex; justify-content: center;">
+      <ol
+        style="font-size: 24px; line-height: 1.8; color: var(--color-shocking-green); list-style-position: inside; padding: 0; margin: 0; text-align: left;">
+        <li>상업적 이용 가능</li>
+        <li>리믹스 가능</li>
+        <li>샘플링 가능</li>
+        <li>2차 창작 가능</li>
+      </ol>
+    </div>
+    <p class="subheading" style="margin-top: 34px;">공공누리 제1유형 적용</p>
+    <div class="script-box">“상업적 이용과 2차 창작이 가능합니다.”</div>
+  </div>
+
+  <div class="slide">
+    <h2 class="heading-lg" style="margin-bottom: 34px;">어떻게 변하는가?</h2>
+    <div class="layout-split">
+      <div class="card" style="border-color: var(--color-faded-steel);">
+        <h3 class="heading-sm faded">기존</h3>
+        <p class="body-text faded" style="margin-top: 16px;">국악 공부<br>검색 반복<br>메타데이터 탐색<br>실패</p>
+      </div>
+      <div class="center" style="flex: 0.2;">
+        <div class="arrow">→</div>
+      </div>
+      <div class="card green">
+        <h3 class="heading-sm" style="color: var(--color-shocking-green);">DigGak</h3>
+        <p class="body-text" style="margin-top: 16px;">샘플 업로드<br>↓<br>유사 국악 추천<br>↓<br>즉시 작곡 활용</p>
+      </div>
+    </div>
+
+    <div class="script-box">“국악 창작의 진입장벽을 낮춥니다.”</div>
+  </div>
+
+  <div class="slide">
+    <h2 class="heading-lg" style="margin-bottom: 16px;">데모 청음</h2>
+    <p class="subheading faded" style="text-align: center; max-width: 820px;">
+      원본 커버 음원과 디각으로 국악 샘플을 더한 결과를 15초 클립으로 비교해볼 수 있습니다.
+    </p>
+    <div class="demo-grid">
+      <div class="demo-card">
+        <h3 class="heading-sm">Just the Two of Us</h3>
+        <p class="body-text faded">cowbell과 유사한 소리북 계열 사운드를 매칭한 데모입니다.</p>
+        <div class="audio-pair">
+          <div class="audio-item">
+            <span>원본 커버</span>
+            <audio controls preload="metadata" src="audio-preview/just-the-two-of-us-raw-15s.wav"></audio>
+          </div>
+          <div class="audio-item">
+            <span>국악 샘플 적용</span>
+            <audio controls preload="metadata" src="audio-preview/just-the-two-of-us-gugak-15s.wav"></audio>
+          </div>
+        </div>
+      </div>
+      <div class="demo-card">
+        <h3 class="heading-sm">Updown Funk</h3>
+        <p class="body-text faded">퍼커션과 유사한 꽹과리 계열 사운드를 더한 데모입니다.</p>
+        <div class="audio-pair">
+          <div class="audio-item">
+            <span>원본 커버</span>
+            <audio controls preload="metadata" src="audio-preview/updown-funk-raw-15s.wav"></audio>
+          </div>
+          <div class="audio-item">
+            <span>국악 샘플 적용</span>
+            <audio controls preload="metadata" src="audio-preview/updown-funk-gugak-15s.wav"></audio>
+          </div>
+        </div>
+      </div>
+      <div class="demo-card">
+        <h3 class="heading-sm">Happy</h3>
+        <p class="body-text faded">handclap 계열 사운드를 국악 타악 질감으로 확장한 데모입니다.</p>
+        <div class="audio-pair">
+          <div class="audio-item">
+            <span>원본 커버</span>
+            <audio controls preload="metadata" src="audio-preview/happy-raw-15s.wav"></audio>
+          </div>
+          <div class="audio-item">
+            <span>국악 샘플 적용</span>
+            <audio controls preload="metadata" src="audio-preview/happy-gugak-15s.wav"></audio>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="script-box">“원본 커버와 국악 샘플 적용 결과를 비교해볼 수 있습니다.”</div>
+  </div>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+
+    slides.forEach((slide, index) => {
+      const slideNum = document.createElement('div');
+      slideNum.className = 'slide-number';
+      slideNum.innerText = (index + 1) + ' / ' + slides.length;
+      slide.appendChild(slideNum);
+    });
+
+    function updateSlide(index) {
+      slides.forEach((s, i) => {
+        if (i === index) {
+          s.classList.add('active');
+        } else {
+          s.classList.remove('active');
+        }
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        currentSlide = Math.min(slides.length - 1, currentSlide + 1);
+        updateSlide(currentSlide);
+      } else if (e.key === 'ArrowLeft') {
+        currentSlide = Math.max(0, currentSlide - 1);
+        updateSlide(currentSlide);
+      }
+    });
+  </script>
+</body>
+
+</html>

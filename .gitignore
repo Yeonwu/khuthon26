@@ -8,4 +8,5 @@
 .DS_Store
 *.mp3
 *.wav
+!/assets/**/*.wav
 __pycache__/
