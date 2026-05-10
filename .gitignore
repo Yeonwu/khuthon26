@@ -1,6 +1,11 @@
+/node_modules
+/frontend/node_modules
+/frontend/dist
 /audio
 /audio_generated
+/audio_uploaded
 .env
+.DS_Store
 *.mp3
 *.wav
 __pycache__/
